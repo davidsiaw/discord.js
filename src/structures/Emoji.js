@@ -1,5 +1,6 @@
 const Constants = require('../util/Constants');
 const Collection = require('../util/Collection');
+const Permissions = require('../util/Permissions');
 const Snowflake = require('../util/Snowflake');
 
 /**
@@ -77,6 +78,15 @@ class Emoji {
   }
 
   /**
+   * Whether the moej is deletable by the client user
+   * @type {boolean}
+   * @readonly
+   */
+  get deletable() {
+    return !this.managed && this.guild.me.hasPermission(Permissions.FLAGS.MANAGE_EMOJIS);
+  }
+
+  /**
    * A collection of roles this emoji is active for (empty if all), mapped by role ID
    * @type {Collection<Snowflake, Role>}
    * @readonly
@@ -138,6 +148,15 @@ class Emoji {
    */
   setName(name, reason) {
     return this.edit({ name }, reason);
+  }
+
+  /**
+   * Fetches the author for this emoji
+   * @returns {Promise<User>}
+   */
+  fetchAuthor() {
+    return this.client.rest.makeRequest('get', Constants.Endpoints.Guild(this.guild).Emoji(this.id), true)
+      .then(emoji => this.client.dataManager.newUser(emoji.user));
   }
 
   /**

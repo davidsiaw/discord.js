@@ -150,6 +150,10 @@ class Permissions {
     return this.missing(permissions, !explicit);
   }
 
+  valueOf() {
+    return this.bitfield;
+  }
+
   /**
    * Data that can be resolved to give a permission number. This can be:
    * * A string (see {@link Permissions.FLAGS})
@@ -165,7 +169,7 @@ class Permissions {
   static resolve(permission) {
     if (permission instanceof Array) return permission.map(p => this.resolve(p)).reduce((prev, p) => prev | p, 0);
     if (typeof permission === 'string') permission = this.FLAGS[permission];
-    if (typeof permission !== 'number' || permission < 1) throw new RangeError(Constants.Errors.NOT_A_PERMISSION);
+    if (typeof permission !== 'number' || permission < 0) throw new RangeError(Constants.Errors.NOT_A_PERMISSION);
     return permission;
   }
 }

@@ -10,6 +10,7 @@
     <a href="https://www.npmjs.com/package/discord.js"><img src="https://img.shields.io/npm/dt/discord.js.svg?maxAge=3600" alt="NPM downloads" /></a>
     <a href="https://travis-ci.org/discordjs/discord.js"><img src="https://travis-ci.org/discordjs/discord.js.svg" alt="Build status" /></a>
     <a href="https://david-dm.org/discordjs/discord.js"><img src="https://img.shields.io/david/discordjs/discord.js.svg?maxAge=3600" alt="Dependencies" /></a>
+    <a href="https://www.patreon.com/discordjs"><img src="https://img.shields.io/badge/donate-patreon-F96854.svg" alt="Patreon" /></a>
   </p>
   <p>
     <a href="https://nodei.co/npm/discord.js/"><img src="https://nodei.co/npm/discord.js.png?downloads=true&stars=true" alt="NPM info" /></a>
@@ -24,7 +25,7 @@ v12 is still very much a work-in-progress, as we're aiming to make it the best i
 If you are fond of living life on the bleeding-edge, check out the master branch.
 
 ## About
-discord.js is a powerful [node.js](https://nodejs.org) module that allows you to interact with the
+discord.js is a powerful [Node.js](https://nodejs.org) module that allows you to interact with the
 [Discord API](https://discordapp.com/developers/docs/intro) very easily.
 
 - Object-oriented
@@ -74,6 +75,7 @@ client.login('token');
 ## Links
 * [Website](https://discord.js.org/) ([source](https://github.com/discordjs/website))
 * [Documentation](https://discord.js.org/#/docs)
+* [Guide](https://discordjs.guide/) ([source](https://github.com/discordjs/guide))
 * [Discord.js Discord server](https://discord.gg/bRCvFy9)
 * [Discord API Discord server](https://discord.gg/discord-api)
 * [GitHub](https://github.com/discordjs/discord.js)

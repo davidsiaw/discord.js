@@ -4,7 +4,6 @@ const Permissions = require('../../util/Permissions');
 const Constants = require('../../util/Constants');
 const Endpoints = Constants.Endpoints;
 const Collection = require('../../util/Collection');
-const Snowflake = require('../../util/Snowflake');
 const Util = require('../../util/Util');
 
 const User = require('../../structures/User');
@@ -172,18 +171,14 @@ class RESTMethods {
     return this.rest.makeRequest('post', Endpoints.Guild(guild).ack, true).then(() => guild);
   }
 
-  bulkDeleteMessages(channel, messages, filterOld) {
-    if (filterOld) {
-      messages = messages.filter(id =>
-        Date.now() - Snowflake.deconstruct(id).date.getTime() < 1209600000
-      );
-    }
+  bulkDeleteMessages(channel, messages) {
+    const ids = messages.map(m => m.id);
     return this.rest.makeRequest('post', Endpoints.Channel(channel).messages.bulkDelete, true, {
-      messages,
+      messages: ids,
     }).then(() =>
       this.client.actions.MessageDeleteBulk.handle({
         channel_id: channel.id,
-        ids: messages,
+        ids,
       }).messages
     );
   }
@@ -339,11 +334,12 @@ class RESTMethods {
   updateChannel(channel, _data, reason) {
     const data = {};
     data.name = (_data.name || channel.name).trim();
-    data.topic = _data.topic || channel.topic;
+    data.topic = typeof _data.topic === 'undefined' ? channel.topic : _data.topic;
+    data.nsfw = typeof _data.nsfw === 'undefined' ? channel.nsfw : _data.nsfw;
     data.position = _data.position || channel.position;
     data.bitrate = _data.bitrate || (channel.bitrate ? channel.bitrate * 1000 : undefined);
-    data.user_limit = _data.userLimit || channel.userLimit;
-    data.parent_id = _data.parent || (channel.parent ? channel.parent.id : undefined);
+    data.user_limit = typeof _data.userLimit !== 'undefined' ? _data.userLimit : channel.userLimit;
+    data.parent_id = _data.parent === null ? null : _data.parent || (channel.parent ? channel.parent.id : undefined);
     return this.rest.makeRequest('patch', Endpoints.Channel(channel), true, data, undefined, reason).then(newData =>
       this.client.actions.ChannelUpdate.handle(newData).updated
     );
@@ -420,12 +416,7 @@ class RESTMethods {
     return this.rest.makeRequest(
       'delete', Endpoints.Guild(guild).Member(member), true,
       undefined, undefined, reason)
-      .then(() =>
-        this.client.actions.GuildMemberRemove.handle({
-          guild_id: guild.id,
-          user: member.user,
-        }).member
-      );
+      .then(() => member);
   }
 
   createGuildRole(guild, data, reason) {
@@ -527,19 +518,21 @@ class RESTMethods {
       if (member._roles.includes(role.id)) return resolve(member);
 
       const listener = (oldMember, newMember) => {
-        if (!oldMember._roles.includes(role.id) && newMember._roles.includes(role.id)) {
+        if (newMember.id === member.id && !oldMember._roles.includes(role.id) && newMember._roles.includes(role.id)) {
           this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener);
           resolve(newMember);
         }
       };
 
       this.client.on(Constants.Events.GUILD_MEMBER_UPDATE, listener);
-      const timeout = this.client.setTimeout(() =>
-        this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener), 10e3);
+      const timeout = this.client.setTimeout(() => {
+        this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener);
+        reject(new Error('Adding the role timed out.'));
+      }, 10e3);
 
       return this.rest.makeRequest('put', Endpoints.Member(member).Role(role.id), true, undefined, undefined, reason)
         .catch(err => {
-          this.client.removeListener(Constants.Events.GUILD_BAN_REMOVE, listener);
+          this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener);
           this.client.clearTimeout(timeout);
           reject(err);
         });
@@ -551,19 +544,21 @@ class RESTMethods {
       if (!member._roles.includes(role.id)) return resolve(member);
 
       const listener = (oldMember, newMember) => {
-        if (oldMember._roles.includes(role.id) && !newMember._roles.includes(role.id)) {
+        if (newMember.id === member.id && oldMember._roles.includes(role.id) && !newMember._roles.includes(role.id)) {
           this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener);
           resolve(newMember);
         }
       };
 
       this.client.on(Constants.Events.GUILD_MEMBER_UPDATE, listener);
-      const timeout = this.client.setTimeout(() =>
-        this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener), 10e3);
+      const timeout = this.client.setTimeout(() => {
+        this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener);
+        reject(new Error('Removing the role timed out.'));
+      }, 10e3);
 
       return this.rest.makeRequest('delete', Endpoints.Member(member).Role(role.id), true, undefined, undefined, reason)
         .catch(err => {
-          this.client.removeListener(Constants.Events.GUILD_BAN_REMOVE, listener);
+          this.client.removeListener(Constants.Events.GUILD_MEMBER_UPDATE, listener);
           this.client.clearTimeout(timeout);
           reject(err);
         });
@@ -634,11 +629,11 @@ class RESTMethods {
     const data = {};
     data.name = _data.name || role.name;
     data.position = typeof _data.position !== 'undefined' ? _data.position : role.position;
-    data.color = this.client.resolver.resolveColor(_data.color || role.color);
+    data.color = _data.color === null ? null : this.client.resolver.resolveColor(_data.color || role.color);
     data.hoist = typeof _data.hoist !== 'undefined' ? _data.hoist : role.hoist;
     data.mentionable = typeof _data.mentionable !== 'undefined' ? _data.mentionable : role.mentionable;
 
-    if (_data.permissions) data.permissions = Permissions.resolve(_data.permissions);
+    if (typeof _data.permissions !== 'undefined') data.permissions = Permissions.resolve(_data.permissions);
     else data.permissions = role.permissions;
 
     return this.rest.makeRequest('patch', Endpoints.Guild(role.guild).Role(role.id), true, data, undefined, reason)

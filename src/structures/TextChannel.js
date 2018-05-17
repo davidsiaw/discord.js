@@ -52,9 +52,24 @@ class TextChannel extends GuildChannel {
   /**
    * Fetch all webhooks for the channel.
    * @returns {Promise<Collection<Snowflake, Webhook>>}
+   * @example
+   * // Fetch webhooks
+   * channel.fetchWebhooks()
+   *   .then(hooks => console.log(`This channel has ${hooks.size} hooks`))
+   *   .catch(console.error);
    */
   fetchWebhooks() {
     return this.client.rest.methods.getChannelWebhooks(this);
+  }
+
+  /**
+   * Sets whether this channel is flagged as NSFW.
+   * @param {boolean} nsfw Whether the channel should be considered NSFW
+   * @param {string} [reason] Reason for changing the channel's NSFW flag
+   * @returns {Promise<TextChannel>}
+   */
+  setNSFW(nsfw, reason) {
+    return this.edit({ nsfw }, reason);
   }
 
   /**
@@ -80,26 +95,26 @@ class TextChannel extends GuildChannel {
 
   // These are here only for documentation purposes - they are implemented by TextBasedChannel
   /* eslint-disable no-empty-function */
-  send() {}
-  sendMessage() {}
-  sendEmbed() {}
-  sendFile() {}
-  sendFiles() {}
-  sendCode() {}
-  fetchMessage() {}
-  fetchMessages() {}
-  fetchPinnedMessages() {}
-  search() {}
-  startTyping() {}
-  stopTyping() {}
-  get typing() {}
-  get typingCount() {}
-  createCollector() {}
-  createMessageCollector() {}
-  awaitMessages() {}
-  bulkDelete() {}
-  acknowledge() {}
-  _cacheMessage() {}
+  send() { }
+  sendMessage() { }
+  sendEmbed() { }
+  sendFile() { }
+  sendFiles() { }
+  sendCode() { }
+  fetchMessage() { }
+  fetchMessages() { }
+  fetchPinnedMessages() { }
+  search() { }
+  startTyping() { }
+  stopTyping() { }
+  get typing() { }
+  get typingCount() { }
+  createCollector() { }
+  createMessageCollector() { }
+  awaitMessages() { }
+  bulkDelete() { }
+  acknowledge() { }
+  _cacheMessage() { }
 }
 
 TextBasedChannel.applyToClass(TextChannel, true);

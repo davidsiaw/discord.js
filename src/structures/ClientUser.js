@@ -174,6 +174,11 @@ class ClientUser extends User {
    * Sets the full presence of the client user.
    * @param {PresenceData} data Data for the presence
    * @returns {Promise<ClientUser>}
+   * @example
+   * // Set the client user's presence
+   * client.user.setPresence({ game: { name: 'with discord.js' }, status: 'idle' })
+   *   .then(console.log)
+   *   .catch(console.error);
    */
   setPresence(data) {
     // {"op":3,"d":{"status":"dnd","since":0,"game":null,"afk":false}}
@@ -241,6 +246,11 @@ class ClientUser extends User {
    * Sets the status of the client user.
    * @param {PresenceStatus} status Status to change to
    * @returns {Promise<ClientUser>}
+   * @example
+   * // Set the client user's status
+   * client.user.setStatus('idle')
+   *   .then(console.log)
+   *   .catch(console.error);
    */
   setStatus(status) {
     return this.setPresence({ status });
@@ -270,12 +280,16 @@ class ClientUser extends User {
    * @param {string} [options.url] Twitch stream URL
    * @param {ActivityType|number} [options.type] Type of the activity
    * @returns {Promise<Presence>}
+   * @example
+   * client.user.setActivity('YouTube', { type: 'WATCHING' })
+   *   .then(presence => console.log(`Activity set to ${presence.game ? presence.game.name : 'none'}`))
+   *   .catch(console.error);
    */
   setActivity(name, { url, type } = {}) {
     if (!name) return this.setPresence({ game: null });
     return this.setPresence({
       game: { name, type, url },
-    });
+    }).then(clientUser => clientUser.presence);
   }
 
   /**
@@ -293,8 +307,18 @@ class ClientUser extends User {
    * @param {number} [options.limit=25] Maximum number of mentions to retrieve
    * @param {boolean} [options.roles=true] Whether to include role mentions
    * @param {boolean} [options.everyone=true] Whether to include everyone/here mentions
-   * @param {Guild|Snowflake} [options.guild] Limit the search to a specific guild
+   * @param {GuildResolvable} [options.guild] Limit the search to a specific guild
    * @returns {Promise<Message[]>}
+   * @example
+   * // Fetch mentions
+   * client.user.fetchMentions()
+   *   .then(console.log)
+   *   .catch(console.error);
+   * @example
+   * // Fetch mentions from a guild
+   * client.user.fetchMentions({ guild: '222078108977594368' })
+   *   .then(console.log)
+   *   .catch(console.error);
    */
   fetchMentions(options = {}) {
     return this.client.rest.methods.fetchMentions(options);
@@ -324,7 +348,7 @@ class ClientUser extends User {
 
   /**
    * Creates a guild.
-   * <warn>This is only available when using a user account.</warn>
+   * <warn>This is only available to bots in less than 10 guilds and user accounts.</warn>
    * @param {string} name The name of the guild
    * @param {string} [region] The region for the server
    * @param {BufferResolvable|Base64Resolvable} [icon=null] The icon for the guild
@@ -354,6 +378,14 @@ class ClientUser extends User {
    * Creates a Group DM.
    * @param {GroupDMRecipientOptions[]} recipients The recipients
    * @returns {Promise<GroupDMChannel>}
+   * @example
+   * // Create a Group DM with a token provided from OAuth
+   * client.user.createGroupDM([{
+   *   user: '66564597481480192',
+   *   accessToken: token
+   * }])
+   *   .then(console.log)
+   *   .catch(console.error);
    */
   createGroupDM(recipients) {
     return this.client.rest.methods.createGroupDM({

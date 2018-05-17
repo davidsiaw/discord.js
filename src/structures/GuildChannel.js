@@ -4,6 +4,7 @@ const PermissionOverwrites = require('./PermissionOverwrites');
 const Permissions = require('../util/Permissions');
 const Collection = require('../util/Collection');
 const Constants = require('../util/Constants');
+const Invite = require('./Invite');
 
 /**
  * Represents a guild channel (i.e. text channels and voice channels).
@@ -140,7 +141,7 @@ class GuildChannel extends Channel {
   }
 
   /**
-   * An object mapping permission flags to `true` (enabled) or `false` (disabled).
+   * An object mapping permission flags to `true` (enabled), `false` (disabled), or `null` (not set).
    * ```js
    * {
    *  'SEND_MESSAGES': true,
@@ -161,7 +162,15 @@ class GuildChannel extends Channel {
    * message.channel.overwritePermissions(message.author, {
    *   SEND_MESSAGES: false
    * })
-   *   .then(() => console.log('Done!'))
+   *   .then(updated => console.log(updated.permissionOverwrites.get(message.author.id)))
+   *   .catch(console.error);
+   * @example
+   * // Overwite permissions for a message author and reset some
+   * message.channel.overwritePermissions(message.author, {
+   *   VIEW_CHANNEL: false,
+   *   SEND_MESSAGES: null
+   * })
+   *   .then(updated => console.log(updated.permissionOverwrites.get(message.author.id)))
    *   .catch(console.error);
    */
   overwritePermissions(userOrRole, options, reason) {
@@ -212,6 +221,7 @@ class GuildChannel extends Channel {
    * @property {string} [name] The name of the channel
    * @property {number} [position] The position of the channel
    * @property {string} [topic] The topic of the text channel
+   * @property {boolean} [nsfw] Whether the channel is NSFW
    * @property {number} [bitrate] The bitrate of the voice channel
    * @property {number} [userLimit] The user limit of the channel
    */
@@ -263,9 +273,14 @@ class GuildChannel extends Channel {
 
   /**
    * Set a new parent for the guild channel.
-   * @param {GuildChannel|SnowFlake} parent The new parent for the guild channel
+   * @param {CategoryChannel|SnowFlake} parent The new parent for the guild channel
    * @param {string} [reason] Reason for changing the guild channel's parent
    * @returns {Promise<GuildChannel>}
+   * @example
+   * // Sets the parent of a channel
+   * channel.setParent('174674066072928256')
+   *   .then(updated => console.log(`Set the category of ${updated.name} to ${updated.parent.name}`))
+   *   .catch(console.error);
    */
   setParent(parent, reason) {
     parent = this.client.resolver.resolveChannelID(parent);
@@ -279,8 +294,8 @@ class GuildChannel extends Channel {
    * @returns {Promise<GuildChannel>}
    * @example
    * // Set a new channel topic
-   * channel.setTopic('needs more rate limiting')
-   *   .then(newChannel => console.log(`Channel's new topic is ${newChannel.topic}`))
+   * channel.setTopic('Needs more rate limiting')
+   *   .then(updated => console.log(`Channel's new topic is ${updated.topic}`))
    *   .catch(console.error);
    */
   setTopic(topic, reason) {
@@ -315,10 +330,33 @@ class GuildChannel extends Channel {
    * @param {boolean} [withTopic=true] Whether to clone the channel with this channel's topic
    * @param {string} [reason] Reason for cloning this channel
    * @returns {Promise<GuildChannel>}
+   * @example
+   * // Clone a channel
+   * channel.clone(undefined, true, false, 'Needed a clone')
+   *   .then(clone => console.log(`Cloned ${channel.name} to make a channel called ${clone.name}`))
+   *   .catch(console.error);
    */
   clone(name = this.name, withPermissions = true, withTopic = true, reason) {
     return this.guild.createChannel(name, this.type, withPermissions ? this.permissionOverwrites : [], reason)
       .then(channel => withTopic ? channel.setTopic(this.topic) : channel);
+  }
+
+  /**
+   * Fetches a collection of invites to this guild channel.
+   * Resolves with a collection mapping invites by their codes.
+   * @returns {Promise<Collection<string, Invite>>}
+   */
+  fetchInvites() {
+    return this.client.rest.makeRequest('get', Constants.Endpoints.Channel(this.id).invites, true)
+      .then(data => {
+        const invites = new Collection();
+        for (let invite of data) {
+          invite = new Invite(this.client, invite);
+          invites.set(invite.code, invite);
+        }
+
+        return invites;
+      });
   }
 
   /**
@@ -327,9 +365,9 @@ class GuildChannel extends Channel {
    * @returns {Promise<GuildChannel>}
    * @example
    * // Delete the channel
-   * channel.delete('making room for new channels')
-   *   .then(channel => console.log(`Deleted ${channel.name} to make room for new channels`))
-   *   .catch(console.error); // Log error
+   * channel.delete('Making room for new channels')
+   *   .then(deleted => console.log(`Deleted ${deleted.name} to make room for new channels`))
+   *   .catch(console.error);
    */
   delete(reason) {
     return this.client.rest.methods.deleteChannel(this, reason);
@@ -368,6 +406,18 @@ class GuildChannel extends Channel {
   get deletable() {
     return this.id !== this.guild.id &&
       this.permissionsFor(this.client.user).has(Permissions.FLAGS.MANAGE_CHANNELS);
+  }
+
+  /**
+   * Whether the channel is manageable by the client user
+   * @type {boolean}
+   * @readonly
+   */
+  get manageable() {
+    if (this.client.user.id === this.guild.ownerID) return true;
+    const permissions = this.permissionsFor(this.client.user);
+    if (!permissions) return false;
+    return permissions.has([Permissions.FLAGS.MANAGE_CHANNELS, Permissions.FLAGS.VIEW_CHANNEL]);
   }
 
   /**
